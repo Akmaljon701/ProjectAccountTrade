@@ -17,9 +17,9 @@ urlpatterns = [
     path('admin_all_users/', AllUsersView.as_view(), name='admin_all_users'),
     path('admin_one_user/<int:user_id>/', UserView.as_view(), name='admin_one_user'),
 
-    path('send_email/', SendEmailView.as_view(), name='send_email'),
+    path('send_email/<str:enter_email>/', SendEmailView.as_view(), name='send_email'),
     path('chack_verify_code/<int:verify_code>/', ChackEmailCodeView.as_view(), name='chack_verify_code'),
-    path('user_update_password/<str:new_pass>/', UserUpdatePassword.as_view(), name='user_update_password'),
+    path('user_update_password/<int:verify_code>/<str:new_pass>/', UserUpdatePassword.as_view(), name='user_update_password'),
 
     path('send_support/', SupportPostView.as_view(), name='send_support'),
     path('admin_all_supports/<str:status>/', AllSupportsView.as_view(), name='all_supports'),

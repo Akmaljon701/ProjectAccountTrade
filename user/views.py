@@ -94,61 +94,58 @@ class CustomUserUpdateView(APIView):
 
 
 class SendEmailView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def post(self, request, enter_email):
         """
         Emailga kod yuborish
         """
+        user = CustomUser.objects.filter(email=enter_email).first()
+        if not user:
+            return Response({'error': 'Bunday Email ro\'yhatga olinmagan!'}, status=404)
         subject = 'Confirm the code!'
         from_email = settings.EMAIL_HOST_USER  # Gmail pochta
-        user_email = [request.user.email]  # Foydalanuvchi emaili
+        user_email = [enter_email]  # Foydalanuvchi emaili
 
         verification_code = generate_verification_code()
         message = f'Confirmation code: {verification_code}'
 
         try:
             send_mail(subject, message, from_email, user_email)
-            request.user.verification_code = verification_code
-            request.user.save()
-            return Response({'detail': f'Kod {request.user.email} ga yuborildi!'}, status=status.HTTP_200_OK)
+            user.verification_code = verification_code
+            user.save()
+            return Response({'detail': f'Kod {enter_email} ga yuborildi!'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'detail': 'Xatolik yuz berdi: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ChackEmailCodeView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
 
     def post(self, request, verify_code):
         """
         Email kodeni tekshirish
         """
-        if request.user.verification_code != 0:
-            if request.user.verification_code == verify_code:
-                return Response({'detail': "To'gri kod yuborildi!"}, status=status.HTTP_200_OK)
-            else:
-                return Response({'detail': "Noto'gri kod yuborildi!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
-            return Response({'detail': "Kod topilmadi!"}, status=status.HTTP_404_NOT_FOUND)
+        user = CustomUser.objects.filter(verification_code=verify_code).first()
+        if not user:
+            return Response({'error': 'Noto\'gri kod yuborildi!'}, status=500)
+        return Response({'detail': "To'gri kod yuborildi!"}, status=status.HTTP_200_OK)
 
 
 class UserUpdatePassword(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
 
-    def post(self, request, new_pass):
+    def post(self, request, verify_code, new_pass):
         """
         User email kod tekshiruvdan o'tgandan so'ng parolni yangilashi
         """
+        user = CustomUser.objects.filter(verification_code=verify_code).first()
+        if not user:
+            return Response({'error': 'User topilmadi!'}, status=500)
         if len(new_pass) < 5:
             return Response({'password': 'Parol 5 tadan kam bo\'lmasligi kerak!'},
                             status=status.HTTP_400_BAD_REQUEST)
         hashed_password = make_password(new_pass)
-        request.user.password = hashed_password
-        request.user.verification_code = 0
-        request.user.save()
+        user.password = hashed_password
+        user.verification_code = 0
+        user.save()
 
         return Response({'detail': 'Parol yangilandi.'}, status=status.HTTP_200_OK)
 
@@ -319,8 +316,6 @@ class CategoryUpdateView(APIView):
 
 
 class AllCategoryView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """

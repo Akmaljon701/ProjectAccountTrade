@@ -49,6 +49,40 @@ class PubgAccountAddMediaView(APIView):
         return Response(serializer.errors, status=400)
 
 
+class PubgAccountsView(APIView):
+
+    def get(self, request):
+        """
+        Pubg get "sotuvda" all accounts
+        """
+        accounts = PubgAccount.objects.filter(status_type='sotuvda').order_by('-id').all()
+        serializer = PubgAccountsSerializer(accounts, many=True)
+        return Response(serializer.data)
 
 
+class PubgAccountView(APIView):
 
+    def get(self, request, account_id):
+        """
+        Pubg get account
+        """
+        account = PubgAccount.objects.filter(id=account_id).first()
+        if account:
+            serializer = PubgAccountsSerializer(account)
+            return Response(serializer.data)
+        return Response({'error': 'Account topilamdi!'}, status=404)
+
+
+class PubgAccountsUnderInvestigationView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        Admin uchun Tekshiruvga yuborilgan akkauntlar
+        """
+        if request.user and request.user.role == 'admin':
+            accounts = PubgAccount.objects.filter(status_type="tekshiruvda").all()
+            serializer = PubgAccountsSerializer(accounts, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'Faqat Admin uchun ruxsat berilgan!'}, status=403)

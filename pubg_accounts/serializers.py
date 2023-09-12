@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from user.serializers import *
 from .models import *
 
 
@@ -25,4 +26,26 @@ class PubgAccountAddMediaSerializer(serializers.ModelSerializer):
         return value
 
 
+class PubgAccountsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PubgAccount
+        fields = '__all__'
 
+    def to_representation(self, instance):
+        account = super().to_representation(instance)
+        user_id = account.get('user_fk')
+        category_id = account.get('category_fk')
+        medies_id = account.get('id')
+        if user_id:
+            user = CustomUser.objects.get(id=user_id)
+            user_serializer = CustomUserSerializer(user)
+            account['user'] = user_serializer.data
+        if category_id:
+            category = Category.objects.get(id=category_id)
+            category_serializer = AddCategorySerializer(category)
+            account['category'] = category_serializer.data
+        if medies_id:
+            medies = PubgAccountMedia.objects.filter(account_fk=medies_id).all()
+            user_serializer = PubgAccountAddMediaSerializer(medies, many=True)
+            account['medies'] = user_serializer.data
+        return account

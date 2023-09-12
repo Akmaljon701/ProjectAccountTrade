@@ -6,7 +6,7 @@ class PubgAccount(models.Model):
     user_fk = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     category_fk = models.ForeignKey(Category, on_delete=models.CASCADE)
     type = models.CharField(max_length=50, default='PUBG MOBILE Global')
-    status_type = models.CharField(max_length=50)
+    status_type = models.CharField(max_length=50)   # "tekshiruvda", "sotuvda", "sotildi"
     price = models.CharField(max_length=55)
     level = models.CharField(max_length=10)
     rp = models.CharField(max_length=255)
