@@ -55,7 +55,6 @@ class CustomUserCreateView(APIView):
                     return Response({'error': 'Telefon raqam ro\'yxatga olingan!'}, status=status.HTTP_400_BAD_REQUEST)
 
             serializer.validated_data['password'] = make_password(serializer.validated_data['password'])
-            serializer.validated_data['date_joined'] = timezone.now() + timezone.timedelta(hours=5)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -201,7 +200,7 @@ class SupportPostView(APIView):
         serializer = SupportPostSerializer(data=request.data)
         if serializer.is_valid():
             user_fk = request.user
-            serializer.save(user_fk=user_fk, sanded_at=timezone.now() + timezone.timedelta(hours=5))
+            serializer.save(user_fk=user_fk, sanded_at=timezone.now())
             return Response({'detail': 'Yuborildi!.'}, status=status.HTTP_201_CREATED)
         return Response({'detail': 'Xatolik!'}, status=status.HTTP_400_BAD_REQUEST)
 
