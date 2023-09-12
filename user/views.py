@@ -194,12 +194,15 @@ class SupportPostView(APIView):
         """
         user Support yuborish
         """
-        serializer = SupportPostSerializer(data=request.data)
-        if serializer.is_valid():
-            user_fk = request.user
-            serializer.save(user_fk=user_fk, sanded_at=timezone.now())
-            return Response({'detail': 'Yuborildi!.'}, status=status.HTTP_201_CREATED)
-        return Response({'detail': 'Xatolik!'}, status=status.HTTP_400_BAD_REQUEST)
+        if request.user and request.user.role == "user":
+            serializer = SupportPostSerializer(data=request.data)
+            if serializer.is_valid():
+                user_fk = request.user
+                serializer.save(user_fk=user_fk, sanded_at=timezone.now())
+                return Response({'detail': 'Yuborildi!.'}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'detail': 'Support yuborish faqat userlar uchun!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AllSupportsView(APIView):

@@ -23,13 +23,19 @@ class PubgAccountCreateView(APIView):
 
     @swagger_auto_schema(request_body=PubgAccountCreateSerializer)
     def post(self, request):
-        serializer = PubgAccountCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            user = request.user
-            status_type = "tekshiruvda"
-            serializer.save(user_fk=user, status_type=status_type)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        """
+        user pubg account create qilishi (adminga tekshiruvga jo'natiladi)
+        """
+        if request.user and request.user.role == "user":
+            serializer = PubgAccountCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                user = request.user
+                status_type = "tekshiruvda"
+                serializer.save(user_fk=user, status_type=status_type)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'detail': 'Account create faqat userlar uchun!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PubgAccountAddMediaView(APIView):
@@ -40,13 +46,16 @@ class PubgAccountAddMediaView(APIView):
     @swagger_auto_schema(request_body=PubgAccountAddMediaSerializer)
     def post(self, request):
         """
-        Pubg account uchun media video rasm qo'shish
+        user Pubg account uchun media video rasm qo'shish
         """
-        serializer = PubgAccountAddMediaSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+        if request.user and request.user.role == "user":
+            serializer = PubgAccountAddMediaSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=201)
+            return Response(serializer.errors, status=400)
+        else:
+            return Response({'detail': 'Add medies faqat userlar uchun!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PubgAccountsView(APIView):
