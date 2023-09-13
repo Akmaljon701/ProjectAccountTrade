@@ -10,6 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema
 import uuid
 from channels.layers import get_channel_layer
+
+from user.views import user_chack, admin_chack
 from .serializers import *
 from django.core.mail import send_mail
 from django.conf import settings
@@ -26,16 +28,14 @@ class PubgAccountCreateView(APIView):
         """
         user pubg account create qilishi (adminga tekshiruvga jo'natiladi)
         """
-        if request.user and request.user.role == "user":
-            serializer = PubgAccountCreateSerializer(data=request.data)
-            if serializer.is_valid():
-                user = request.user
-                status_type = "tekshiruvda"
-                serializer.save(user_fk=user, status_type=status_type)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({'detail': 'Account create faqat userlar uchun!'}, status=status.HTTP_400_BAD_REQUEST)
+        user_chack(request.user.role)
+        serializer = PubgAccountCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            user = request.user
+            status_type = "tekshiruvda"
+            serializer.save(user_fk=user, status_type=status_type)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PubgAccountAddMediaView(APIView):
@@ -48,14 +48,12 @@ class PubgAccountAddMediaView(APIView):
         """
         user Pubg account uchun media video rasm qo'shish
         """
-        if request.user and request.user.role == "user":
-            serializer = PubgAccountAddMediaSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=201)
-            return Response(serializer.errors, status=400)
-        else:
-            return Response({'detail': 'Add medies faqat userlar uchun!'}, status=status.HTTP_400_BAD_REQUEST)
+        user_chack(request.user.role)
+        serializer = PubgAccountAddMediaSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
 
 
 class PubgAccountsView(APIView):
@@ -70,11 +68,16 @@ class PubgAccountsView(APIView):
 
 
 class PubgAccountView(APIView):
-
-    def get(self, request, account_id):
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('account_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+    ])
+    def get(self, request):
         """
         Pubg get account
         """
+        account_id = request.query_params.get('account_id')
+        if account_id is None:
+            return Response({'error': 'account_id kiritilmadi!'}, status=400)
         account = PubgAccount.objects.filter(id=account_id).first()
         if account:
             serializer = PubgAccountsSerializer(account)
@@ -90,8 +93,7 @@ class PubgAccountsUnderInvestigationView(APIView):
         """
         Admin uchun Tekshiruvga yuborilgan akkauntlar
         """
-        if request.user and request.user.role == 'admin':
-            accounts = PubgAccount.objects.filter(status_type="tekshiruvda").all()
-            serializer = PubgAccountsSerializer(accounts, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'Faqat Admin uchun ruxsat berilgan!'}, status=403)
+        admin_chack(request.user.role)
+        accounts = PubgAccount.objects.filter(status_type="tekshiruvda").all()
+        serializer = PubgAccountsSerializer(accounts, many=True)
+        return Response(serializer.data)

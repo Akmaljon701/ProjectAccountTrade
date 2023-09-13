@@ -1,5 +1,6 @@
 from asgiref.sync import async_to_sync
 from drf_yasg import openapi
+from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework.parsers import MultiPartParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -17,6 +18,19 @@ import random
 from django.utils import timezone
 
 
+# admin tekshiruv
+def admin_chack(role):
+    if role != 'admin':
+        raise PermissionDenied(detail='Faqat Admin uchun ruxsat berilgan!')
+
+
+# user tekshiruv
+def user_chack(role):
+    if role != 'user':
+        raise PermissionDenied(detail='Faqat User uchun ruxsat berilgan!')
+
+
+# email uchun generate code
 def generate_verification_code():
     return str(random.randint(100000, 999999))
 
@@ -94,17 +108,22 @@ class CustomUserUpdateView(APIView):
 
 
 class SendEmailView(APIView):
-
-    def post(self, request, enter_email):
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('email', openapi.IN_QUERY, type=openapi.TYPE_STRING)
+    ])
+    def post(self, request):
         """
         Emailga kod yuborish
         """
-        user = CustomUser.objects.filter(email=enter_email).first()
+        email = request.query_params.get('email')
+        if email is None:
+            return Response({'error': 'email kiritilmadi!'}, status=400)
+        user = CustomUser.objects.filter(email=email).first()
         if not user:
             return Response({'error': 'Bunday Email ro\'yhatga olinmagan!'}, status=404)
         subject = 'Confirm the code!'
         from_email = settings.EMAIL_HOST_USER  # Gmail pochta
-        user_email = [enter_email]  # Foydalanuvchi emaili
+        user_email = [email]  # Foydalanuvchi emaili
 
         verification_code = generate_verification_code()
         message = f'Confirmation code: {verification_code}'
@@ -113,17 +132,22 @@ class SendEmailView(APIView):
             send_mail(subject, message, from_email, user_email)
             user.verification_code = verification_code
             user.save()
-            return Response({'detail': f'Kod {enter_email} ga yuborildi!'}, status=status.HTTP_200_OK)
+            return Response({'detail': f'Kod {email} ga yuborildi!'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'detail': 'Xatolik yuz berdi: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ChackEmailCodeView(APIView):
-
-    def post(self, request, verify_code):
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('verify_code', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+    ])
+    def post(self, request):
         """
         Email kodeni tekshirish
         """
+        verify_code = request.query_params.get('verify_code')
+        if verify_code is None:
+            return Response({'error': 'verify_code kiritilmadi!'}, status=400)
         user = CustomUser.objects.filter(verification_code=verify_code).first()
         if not user:
             return Response({'error': 'Noto\'gri kod yuborildi!'}, status=500)
@@ -131,11 +155,18 @@ class ChackEmailCodeView(APIView):
 
 
 class UserUpdatePassword(APIView):
-
-    def post(self, request, verify_code, new_pass):
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('verify_code', openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
+        openapi.Parameter('new_pass', openapi.IN_QUERY, type=openapi.TYPE_STRING)
+    ])
+    def post(self, request):
         """
         User email kod tekshiruvdan o'tgandan so'ng parolni yangilashi
         """
+        verify_code = request.query_params.get('verify_code')
+        new_pass = request.query_params.get('new_pass')
+        if new_pass is None or verify_code is None:
+            return Response({'error': 'verify_code yoki new_pass kiritilmadi!'}, status=400)
         user = CustomUser.objects.filter(verification_code=verify_code).first()
         if not user:
             return Response({'error': 'User topilmadi!'}, status=500)
@@ -158,31 +189,33 @@ class AllUsersView(APIView):
         """
         Admin hamma userlarni ko'ra olishi
         """
-        if request.user and request.user.role == "admin":
-            users = CustomUser.objects.filter(role='user').order_by('-id').all()
-            serializer = AllUsersSerializer(users, many=True)
-            return Response(serializer.data)
-        else:
-            return Response({'error': 'Faqat Admin uchun ruxsat berilgan!'}, status=status.HTTP_403_FORBIDDEN)
+        admin_chack(request.user.role)
+        users = CustomUser.objects.filter(role='user').order_by('-id').all()
+        serializer = AllUsersSerializer(users, many=True)
+        return Response(serializer.data)
 
 
 class UserView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, user_id):
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('user_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+    ])
+    def get(self, request):
         """
         Admin user malumotlarini ko'ra olishi
         """
-        if request.user and request.user.role == "admin":
-            user = CustomUser.objects.filter(id=user_id, role='user').first()
-            if user:
-                serializer = CustomUserSerializer(user)
-                return Response(serializer.data)
-            else:
-                return Response({'error': 'User topilmadi!'}, status=404)
+        admin_chack(request.user.role)
+        user_id = request.query_params.get('user_id')
+        if user_id is None:
+            return Response({'error': 'user_id kiritilmadi!'}, status=400)
+        user = CustomUser.objects.filter(id=user_id, role='user').first()
+        if user:
+            serializer = CustomUserSerializer(user)
+            return Response(serializer.data)
         else:
-            return Response({'error': 'Faqat Admin uchun ruxsat berilgan!'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'User topilmadi!'}, status=404)
 
 
 class SupportPostView(APIView):
@@ -194,80 +227,87 @@ class SupportPostView(APIView):
         """
         user Support yuborish
         """
-        if request.user and request.user.role == "user":
-            serializer = SupportPostSerializer(data=request.data)
-            if serializer.is_valid():
-                user_fk = request.user
-                serializer.save(user_fk=user_fk, sanded_at=timezone.now())
-                return Response({'detail': 'Yuborildi!.'}, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({'detail': 'Support yuborish faqat userlar uchun!'}, status=status.HTTP_400_BAD_REQUEST)
+        user_chack(request.user.role)
+        serializer = SupportPostSerializer(data=request.data)
+        if serializer.is_valid():
+            user_fk = request.user
+            serializer.save(user_fk=user_fk, sanded_at=timezone.now())
+            return Response({'detail': 'Yuborildi!.'}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AllSupportsView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, status):
+    def get(self, request):
         """
         Admin hamma supportlarni ko'ra olishi
         """
-        if request.user and request.user.role == "admin":
-            supports = Support.objects.order_by('-id').all()
-            if status == 'True':
-                supports = supports.filter(read=True)
-            elif status == 'False':
-                supports = supports.filter(read=False)
-            else:
-                return Response({'error': "Faqat 'True' yoki 'False' status bo'lishi kerak!"}, status=422)
-            serializer = AllSupportsSerializer(supports, many=True)
-            return Response(serializer.data)
+        admin_chack(request.user.role)
+        status = request.query_params.get('status')
+        if status is None:
+            return Response({'error': 'status kiritilmadi!'}, status=400)
+        supports = Support.objects.order_by('-id').all()
+        if status == 'True':
+            supports = supports.filter(read=True)
+        elif status == 'False':
+            supports = supports.filter(read=False)
         else:
-            return Response({'error': 'Faqat Admin uchun ruxsat berilgan!'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': "Faqat 'True' yoki 'False' status bo'lishi kerak!"}, status=422)
+        serializer = AllSupportsSerializer(supports, many=True)
+        return Response(serializer.data)
 
 
 class SupportView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, support_id):
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('support_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+    ])
+    def get(self, request):
         """
         Admin supportni ko'ra olishi
         """
-        if request.user and request.user.role == "admin":
-            support = Support.objects.filter(id=support_id).first()
-            if support:
-                serializer = AllSupportsSerializer(support)
-                return Response(serializer.data, status=200)
-            else:
-                return Response({'error': "Support topilmadi!"}, status=404)
+        admin_chack(request.user.role)
+        support_id = request.query_params.get('support_id')
+        if support_id is None:
+            return Response({'error': 'support_id kiritilmadi!'}, status=400)
+        support = Support.objects.filter(id=support_id).first()
+        if support:
+            serializer = AllSupportsSerializer(support)
+            return Response(serializer.data, status=200)
         else:
-            return Response({'error': 'Faqat Admin uchun ruxsat berilgan!'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': "Support topilmadi!"}, status=404)
 
 
 class ReadSupportView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def put(self, request, support_id):
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('support_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+    ])
+    def put(self, request):
         """
         Admin supportni o'qildi qilishi
         """
-        if request.user and request.user.role == "admin":
-            support = Support.objects.filter(id=support_id).first()
-            if support:
-                if support.read != True:
-                    support.read = True
-                    support.save()
-                    serializer = AllSupportsSerializer(support)
-                    return Response(serializer.data)
-                else:
-                    return Response({'error': "Allaqachon o'qilgan support!"}, status=400)
+        admin_chack(request.user.role)
+        support_id = request.query_params.get('support_id')
+        if support_id is None:
+            return Response({'error': 'support_id kiritilmadi!'}, status=400)
+        support = Support.objects.filter(id=support_id).first()
+        if support:
+            if support.read != True:
+                support.read = True
+                support.save()
+                serializer = AllSupportsSerializer(support)
+                return Response(serializer.data)
             else:
-                return Response({'error': 'Support topilmadi!'}, status=404)
+                return Response({'error': "Allaqachon o'qilgan support!"}, status=400)
         else:
-            return Response({'error': 'Faqat Admin uchun ruxsat berilgan!'}, status=403)
+            return Response({'error': 'Support topilmadi!'}, status=404)
 
 
 class AddCategoryView(APIView):
@@ -280,14 +320,12 @@ class AddCategoryView(APIView):
         """
         Admin Category qo'shishi
         """
-        if request.user and request.user.role == "admin":
-            serializer = AddCategorySerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({'error': 'Faqat Admin uchun ruxsat berilgan!'}, status=403)
+        admin_chack(request.user.role)
+        serializer = AddCategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CategoryUpdateView(APIView):
@@ -295,27 +333,33 @@ class CategoryUpdateView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(request_body=UpdateCategorySerializer)
-    def put(self, request, category_id):
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('category_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+        ],
+        request_body=UpdateCategorySerializer
+    )
+    def put(self, request):
         """
         Admin Category update
         """
-        if request.user and request.user.role == "admin":
-            try:
-                category = Category.objects.get(id=category_id)
-            except Category.DoesNotExist:
-                return Response(status=status.HTTP_404_NOT_FOUND)
-            serializer = UpdateCategorySerializer(data=request.data, partial=True)
-            if serializer.is_valid():
-                if 'name' in request.data:
-                    category.name = serializer.validated_data['name']
-                if 'rasm' in request.data:
-                    category.rasm = serializer.validated_data['rasm']
-                category.save()
-                response_category = UpdateCategorySerializer(category)
-                return Response(response_category.data, status=200)
-        else:
-            return Response({'error': 'Faqat Admin uchun ruxsat berilgan!'}, status=403)
+        admin_chack(request.user.role)
+        category_id = request.query_params.get('category_id')
+        if category_id is None:
+            return Response({'error': 'category_id kiritilmadi!'}, status=400)
+        try:
+            category = Category.objects.get(id=category_id)
+        except Category.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = UpdateCategorySerializer(data=request.data, partial=True)
+        if serializer.is_valid():
+            if 'name' in request.data:
+                category.name = serializer.validated_data['name']
+            if 'rasm' in request.data:
+                category.rasm = serializer.validated_data['rasm']
+            category.save()
+            response_category = UpdateCategorySerializer(category)
+            return Response(response_category.data, status=200)
 
 
 class AllCategoryView(APIView):
