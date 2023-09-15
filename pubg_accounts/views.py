@@ -78,7 +78,7 @@ class PubgAccountView(APIView):
         account_id = request.query_params.get('account_id')
         if account_id is None:
             return Response({'error': 'account_id kiritilmadi!'}, status=400)
-        account = PubgAccount.objects.filter(id=account_id).first()
+        account = PubgAccount.objects.filter(id=account_id, status_type='sotuvda').first()
         if account:
             serializer = PubgAccountsSerializer(account)
             return Response(serializer.data)
@@ -97,3 +97,61 @@ class PubgAccountsUnderInvestigationView(APIView):
         accounts = PubgAccount.objects.filter(status_type="tekshiruvda").all()
         serializer = PubgAccountsSerializer(accounts, many=True)
         return Response(serializer.data)
+
+
+class PubgAccountUnderInvestigationView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('account_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+    ])
+    def get(self, request):
+        """
+        Admin tekshiruvdagi accauntni ko'rishi
+        """
+        admin_chack(request.user.role)
+        account_id = request.query_params.get('account_id')
+        if account_id is None:
+            return Response({'error': 'account_id kiritilmadi!'}, status=400)
+        account = PubgAccount.objects.filter(id=account_id, status_type='tekshiruvda').first()
+        if account:
+            serializer = PubgAccountsSerializer(account)
+            return Response(serializer.data)
+        return Response({'error': 'Account topilamdi!'}, status=404)
+
+
+class AdminPubgAccountUnderInvestigationView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('account_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
+        openapi.Parameter('status', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+    ])
+    def put(self, request):
+        """
+        Admin uchun Tekshiruvga yuborilgan akkauntni bekor qilishi yoki sotuvga qo'yishi
+        Admin uchun Sotigan accauntni sotildi qilishi (tarixga o'tkazish)
+        status = ("sotuvda", "sotildi", "bekor_qilindi")
+        """
+        admin_chack(request.user.role)
+        account_id = request.query_params.get('account_id')
+        status = request.query_params.get('status')
+        if account_id is None or status is None:
+            return Response({'detail': 'status va account_id kiritilishi shart!'}, status=400)
+        try:
+            account = PubgAccount.objects.get(id=account_id)
+        except PubgAccount.DoesNotExist:
+            return Response({'detail': "Account not found!"}, status=404)
+        if status not in ["sotuvda", "sotildi", "bekor_qilindi"]:
+            return Response({'detail': 'status faqat ["sotuvda", "sotildi", "bekor_qilindi"] qiymatlarni qabul qiladi!'}, status=422)
+        if account.status_type == status:
+            return Response({'detail': 'Account oldin shunday ham shu statusda!'}, status=401)
+        if status == "sotildi" or status == "bekor_qilindi":
+            medies = PubgAccountMedia.objects.filter(account_fk=account.id).all()
+            if medies.exists():
+                [media.delete() for media in medies]
+        account.status_type = status
+        account.save()
+        return Response({'detail': 'Success'}, status=200)

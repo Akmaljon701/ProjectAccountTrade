@@ -240,9 +240,20 @@ class AllSupportsView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                name='status',
+                in_=openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                description='Support status (True/False)',
+                required=True,
+            ),
+        ]
+    )
     def get(self, request):
         """
-        Admin hamma supportlarni ko'ra olishi
+        Admin hamma supportlarni ko'ra olishi status orqali
         """
         admin_chack(request.user.role)
         status = request.query_params.get('status')
@@ -373,6 +384,30 @@ class AllCategoryView(APIView):
         return Response(serializer.data, status=200)
 
 
+class CategoryDeleteView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('category_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+        ],
+    )
+    def delete(self, request):
+        """
+        Admin delete Category
+        """
+        admin_chack(request.user.role)
+        category_id = request.query_params.get('category_id')
+        if category_id is None:
+            return Response({'error': 'category_id kiritilmadi!'}, status=400)
+        try:
+            category = Category.objects.get(pk=category_id)
+        except Category.DoesNotExist:
+            return Response({'detail': 'Category not found!'}, status=404)
+
+        category.delete()
+        return Response({'detail': 'Deleted'}, status=204)
 
 
 
