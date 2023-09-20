@@ -8,6 +8,9 @@ class CustomUser(AbstractUser):
     role = models.CharField(max_length=20, default="user")
     verification_code = models.PositiveIntegerField(default=0)
 
+    def __str__(self):
+        return f"{self.first_name} {self.username} {self.role}"
+
 
 class Support(models.Model):
     user_fk = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
@@ -15,7 +18,13 @@ class Support(models.Model):
     sanded_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     read = models.BooleanField(default=False, blank=True, null=True)
 
+    def __str__(self):
+        return f"{self.user_fk} {self.text} {self.read}"
+
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
     rasm = models.FileField(upload_to='categories/', blank=True, null=True)
+
+    def __str__(self):
+        return self.name

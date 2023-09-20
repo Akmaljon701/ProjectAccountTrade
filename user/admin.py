@@ -35,5 +35,6 @@ class SupportAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Support, SupportAdmin)
+admin.site.register(Category)
 
 
