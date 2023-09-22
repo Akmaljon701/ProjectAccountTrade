@@ -109,15 +109,13 @@ class CustomUserUpdateView(APIView):
 
 class SendEmailView(APIView):
     @swagger_auto_schema(manual_parameters=[
-        openapi.Parameter('email', openapi.IN_QUERY, type=openapi.TYPE_STRING)
+        openapi.Parameter('email', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True, description='Kod yuborish uchun email kiriting!')
     ])
     def post(self, request):
         """
         Emailga kod yuborish
         """
         email = request.query_params.get('email')
-        if email is None:
-            return Response({'error': 'email kiritilmadi!'}, status=400)
         user = CustomUser.objects.filter(email=email).first()
         if not user:
             return Response({'error': 'Bunday Email ro\'yhatga olinmagan!'}, status=404)
@@ -139,15 +137,13 @@ class SendEmailView(APIView):
 
 class ChackEmailCodeView(APIView):
     @swagger_auto_schema(manual_parameters=[
-        openapi.Parameter('verify_code', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+        openapi.Parameter('verify_code', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True)
     ])
     def post(self, request):
         """
         Email kodeni tekshirish
         """
         verify_code = request.query_params.get('verify_code')
-        if verify_code is None:
-            return Response({'error': 'verify_code kiritilmadi!'}, status=400)
         user = CustomUser.objects.filter(verification_code=verify_code).first()
         if not user:
             return Response({'error': 'Noto\'gri kod yuborildi!'}, status=500)
@@ -156,8 +152,8 @@ class ChackEmailCodeView(APIView):
 
 class UserUpdatePassword(APIView):
     @swagger_auto_schema(manual_parameters=[
-        openapi.Parameter('verify_code', openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
-        openapi.Parameter('new_pass', openapi.IN_QUERY, type=openapi.TYPE_STRING)
+        openapi.Parameter('verify_code', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True),
+        openapi.Parameter('new_pass', openapi.IN_QUERY, type=openapi.TYPE_STRING, required=True)
     ])
     def post(self, request):
         """
@@ -165,8 +161,6 @@ class UserUpdatePassword(APIView):
         """
         verify_code = request.query_params.get('verify_code')
         new_pass = request.query_params.get('new_pass')
-        if new_pass is None or verify_code is None:
-            return Response({'error': 'verify_code yoki new_pass kiritilmadi!'}, status=400)
         user = CustomUser.objects.filter(verification_code=verify_code).first()
         if not user:
             return Response({'error': 'User topilmadi!'}, status=500)
@@ -200,7 +194,7 @@ class UserView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(manual_parameters=[
-        openapi.Parameter('user_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+        openapi.Parameter('user_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True)
     ])
     def get(self, request):
         """
@@ -208,8 +202,6 @@ class UserView(APIView):
         """
         admin_chack(request.user.role)
         user_id = request.query_params.get('user_id')
-        if user_id is None:
-            return Response({'error': 'user_id kiritilmadi!'}, status=400)
         user = CustomUser.objects.filter(id=user_id, role='user').first()
         if user:
             serializer = CustomUserSerializer(user)
@@ -257,8 +249,6 @@ class AllSupportsView(APIView):
         """
         admin_chack(request.user.role)
         status = request.query_params.get('status')
-        if status is None:
-            return Response({'error': 'status kiritilmadi!'}, status=400)
         supports = Support.objects.order_by('-id').all()
         if status == 'True':
             supports = supports.filter(read=True)
@@ -275,7 +265,7 @@ class SupportView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(manual_parameters=[
-        openapi.Parameter('support_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+        openapi.Parameter('support_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True)
     ])
     def get(self, request):
         """
@@ -283,8 +273,6 @@ class SupportView(APIView):
         """
         admin_chack(request.user.role)
         support_id = request.query_params.get('support_id')
-        if support_id is None:
-            return Response({'error': 'support_id kiritilmadi!'}, status=400)
         support = Support.objects.filter(id=support_id).first()
         if support:
             serializer = AllSupportsSerializer(support)
@@ -298,7 +286,7 @@ class ReadSupportView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(manual_parameters=[
-        openapi.Parameter('support_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+        openapi.Parameter('support_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True)
     ])
     def put(self, request):
         """
@@ -306,8 +294,6 @@ class ReadSupportView(APIView):
         """
         admin_chack(request.user.role)
         support_id = request.query_params.get('support_id')
-        if support_id is None:
-            return Response({'error': 'support_id kiritilmadi!'}, status=400)
         support = Support.objects.filter(id=support_id).first()
         if support:
             if support.read != True:
@@ -346,7 +332,7 @@ class CategoryUpdateView(APIView):
 
     @swagger_auto_schema(
         manual_parameters=[
-            openapi.Parameter('category_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+            openapi.Parameter('category_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True)
         ],
         request_body=UpdateCategorySerializer
     )
@@ -356,8 +342,6 @@ class CategoryUpdateView(APIView):
         """
         admin_chack(request.user.role)
         category_id = request.query_params.get('category_id')
-        if category_id is None:
-            return Response({'error': 'category_id kiritilmadi!'}, status=400)
         try:
             category = Category.objects.get(id=category_id)
         except Category.DoesNotExist:
@@ -390,7 +374,7 @@ class CategoryDeleteView(APIView):
 
     @swagger_auto_schema(
         manual_parameters=[
-            openapi.Parameter('category_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+            openapi.Parameter('category_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True)
         ],
     )
     def delete(self, request):
@@ -399,8 +383,6 @@ class CategoryDeleteView(APIView):
         """
         admin_chack(request.user.role)
         category_id = request.query_params.get('category_id')
-        if category_id is None:
-            return Response({'error': 'category_id kiritilmadi!'}, status=400)
         try:
             category = Category.objects.get(pk=category_id)
         except Category.DoesNotExist:

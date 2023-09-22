@@ -4,9 +4,9 @@ from drf_yasg import openapi
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="APIs",
+        title="DRF APIs",
         default_version='v1',
-        description="API documentation for AccountTrade Account Trade",
+        description="API documentation for Account Trade",
         contact=openapi.Contact(email="akmaljonyoqubov088@gmail.com"),
     ),
     public=True,

@@ -203,4 +203,3 @@ EMAIL_IMAP_PORT = 993
 EMAIL_IMAP_USE_TLS = True
 EMAIL_IMAP_USERNAME = 'pubgacc0unttradeuz@gmail.com'  # Gmail pochta
 EMAIL_IMAP_PASSWORD = 'qkpaqphondzyiale'  # Gmail paroli
-

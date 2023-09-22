@@ -21,3 +21,5 @@ class PubgAccountMediaAdmin(admin.ModelAdmin):
 
 
 admin.site.register(PubgAccountMedia, PubgAccountMediaAdmin)
+admin.site.register(PubgAccountOrder)
+admin.site.register(PubgAccountHistory)

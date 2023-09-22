@@ -37,11 +37,11 @@ class PubgAccountsSerializer(serializers.ModelSerializer):
         category_id = account.get('category_fk')
         medies_id = account.get('id')
         if user_id:
-            user = CustomUser.objects.get(id=user_id)
+            user = CustomUser.objects.filter(id=user_id).first()
             user_serializer = CustomUserSerializer(user)
             account['user'] = user_serializer.data
         if category_id:
-            category = Category.objects.get(id=category_id)
+            category = Category.objects.filter(id=category_id).first()
             category_serializer = AddCategorySerializer(category)
             account['category'] = category_serializer.data
         if medies_id:
@@ -49,3 +49,40 @@ class PubgAccountsSerializer(serializers.ModelSerializer):
             user_serializer = PubgAccountAddMediaSerializer(medies, many=True)
             account['medies'] = user_serializer.data
         return account
+
+
+class UserOrderPostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PubgAccountOrder
+        fields = '__all__'
+        extra_kwargs = {
+            'date': {'read_only': True},
+            'user_fk': {'read_only': True},
+            'order_status': {'read_only': True},
+        }
+
+
+class PubgAccountGetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PubgAccount
+        fields = ('type', 'price', 'level', 'rp', 'clothes', 'skins', 'titles', 'detail')
+
+
+class PubgOrdersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PubgAccountOrder
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        order = super().to_representation(instance)
+        account_id = order.get('account_fk')
+        user_id = order.get('user_fk')
+        if account_id:
+            account = PubgAccount.objects.filter(id=account_id).first()
+            account_serializer = PubgAccountGetSerializer(account)
+            order['account'] = account_serializer.data
+        if user_id:
+            user = CustomUser.objects.filter(id=user_id).first()
+            user_serializer = CustomUserSerializer(user)
+            order['user'] = user_serializer.data
+        return order

@@ -9,4 +9,8 @@ urlpatterns = [
     path('admin_chack_accounts/', PubgAccountsUnderInvestigationView.as_view(), name='admin_chack_accounts'),
     path('admin_chack_account/', PubgAccountUnderInvestigationView.as_view(), name='admin_chack_account'),
     path('admin_account_change_type/', AdminPubgAccountUnderInvestigationView.as_view(), name='admin_account_change_type'),
+    path('user_order_post/', UserOrderPostView.as_view(), name='admin_account_change_type'),
+    path('user_all_orders/', UserAllOrdersView.as_view(), name='user_all_orders'),
+    path('admin_all_orders/', AdminAllOrdersView.as_view(), name='admin_all_orders'),
+    path('admin_completed_order/', AdminOrderCompletedPubgAccountView.as_view(), name='admin_completed_order'),
 ]
