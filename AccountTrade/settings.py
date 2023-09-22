@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 import datetime
+from decouple import config
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-21+a$rsaq*!r7-fgayrj&ix!sj95#56r3g*6s7jln-8*49t(vg'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ["*"]
 
@@ -100,12 +102,12 @@ WSGI_APPLICATION = 'AccountTrade.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'account_trade',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'ENGINE': config('DB_ENGINE'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT', default=''),
     }
 }
 
@@ -190,16 +192,16 @@ SWAGGER_SETTINGS = {
 }
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'pubgacc0unttradeuz@gmail.com'  # Gmail pochta
-EMAIL_HOST_PASSWORD = 'qkpaqphondzyiale'  # Gmail paroli
+EMAIL_BACKEND = config('EMAIL_BACKEND')
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
 # IMAP sozlov
-EMAIL_IMAP_SERVER = 'imap.gmail.com'
-EMAIL_IMAP_PORT = 993
-EMAIL_IMAP_USE_TLS = True
-EMAIL_IMAP_USERNAME = 'pubgacc0unttradeuz@gmail.com'  # Gmail pochta
-EMAIL_IMAP_PASSWORD = 'qkpaqphondzyiale'  # Gmail paroli
+EMAIL_IMAP_SERVER = config('EMAIL_IMAP_SERVER')
+EMAIL_IMAP_PORT = config('EMAIL_IMAP_PORT', default=993, cast=int)
+EMAIL_IMAP_USE_TLS = config('EMAIL_IMAP_USE_TLS', default=True, cast=bool)
+EMAIL_IMAP_USERNAME = config('EMAIL_IMAP_USERNAME')
+EMAIL_IMAP_PASSWORD = config('EMAIL_IMAP_PASSWORD')
